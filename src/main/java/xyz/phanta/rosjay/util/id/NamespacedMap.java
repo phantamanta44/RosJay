@@ -4,9 +4,15 @@ import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 public class NamespacedMap<T> {
+
+    public static <T> NamespacedMap<T> concurrent() {
+        //noinspection Convert2MethodRef
+        return new NamespacedMap<>(() -> new ConcurrentHashMap<>());
+    }
 
     private final BackingMapFactory<T> backingMapFactory;
     private final Map<RosId, T> backing;

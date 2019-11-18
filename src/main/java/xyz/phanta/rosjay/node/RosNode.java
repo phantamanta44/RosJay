@@ -59,6 +59,7 @@ public class RosNode {
     private final String localIp;
     private final Logger internalLogger;
     private final NodeTransportManager transportManager;
+    private final ParameterManager paramManager;
 
     // rpc server
     private final RpcController rpcController = new RpcController();
@@ -94,12 +95,17 @@ public class RosNode {
         this.localIp = localIp;
         this.internalLogger = LoggerFactory.getLogger(GLOBAL_LOGGER.getName() + "." + nodeId.toUnrootedString().replace('/', '.'));
         this.transportManager = new NodeTransportManager(this);
+        this.paramManager = new ParameterManager(this);
         this.tcpServer = new TcpRosServer(this);
         this.tcpClient = new TcpRosClientManager(this);
     }
 
     public RosId getId() {
         return nodeId;
+    }
+
+    public RosNamespace getNamespace() {
+        return nodeId.getNamespace();
     }
 
     RosRpcMaster getRosMaster() {
@@ -207,7 +213,9 @@ public class RosNode {
         }
     }
 
-    // TODO parameter server api
+    public ParameterManager getParameters() {
+        return paramManager;
+    }
 
     public void spinOnce() {
         if (alive) {
@@ -240,6 +248,9 @@ public class RosNode {
 
         internalLogger.debug("Cleaning up transport manager...");
         transportManager.kill();
+
+        internalLogger.debug("Cleaning up parameter manager...");
+        paramManager.kill();
 
         killSockets();
         internalLogger.debug("Termination complete.");
@@ -351,9 +362,9 @@ public class RosNode {
         }
 
         @XmlRpcRoutine
-        public XmlRpcArray<?> paramUpdate(XmlRpcString callerId, XmlRpcString paramName, XmlRpcData paramValue) {
-            internalLogger.trace("paramUpdate({}, {}, {})", callerId, paramName, paramValue);
-            // TODO paramUpdate
+        public XmlRpcArray<?> paramUpdate(XmlRpcString callerId, XmlRpcString paramKey, XmlRpcData paramValue) {
+            internalLogger.trace("paramUpdate({}, {}, {})", callerId, paramKey, paramValue);
+            paramManager.notifyParamUpdate(RosNamespace.ROOT.resolveId(paramKey.value), paramValue);
             return RosUtils.buildRpcResult(XmlRpcInt.ZERO);
         }
 

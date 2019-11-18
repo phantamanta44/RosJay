@@ -165,10 +165,10 @@ public class RosRpcMaster {
         rpcOut.invokeRemote("setParam", callerId, new XmlRpcString(paramKey), value);
     }
 
+    @Nullable
     public XmlRpcData getParam(RosId paramKey) throws IOException {
-        return RosUtils.unwrapRpcResult(
-                rpcOut.invokeRemote("getParam", callerId, new XmlRpcString(paramKey))
-        );
+        XmlRpcArray<?> result = (XmlRpcArray<?>)rpcOut.invokeRemote("getParam", callerId, new XmlRpcString(paramKey));
+        return ((XmlRpcInt)result.get(0)).value != 1 ? null : result.get(2);
     }
 
     @Nullable

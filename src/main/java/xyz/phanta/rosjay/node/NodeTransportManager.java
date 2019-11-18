@@ -20,7 +20,6 @@ import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class NodeTransportManager {
 
@@ -32,7 +31,7 @@ public class NodeTransportManager {
     private final NamespacedMap<Map<Socket, DataOutput>> pubConnections = new NamespacedMap<>();
 
     @SuppressWarnings("Convert2MethodRef")
-    private final NamespacedMap<NodeSubscribeHandler<?>> subs = new NamespacedMap<>(() -> new ConcurrentHashMap<>());
+    private final NamespacedMap<NodeSubscribeHandler<?>> subs = NamespacedMap.concurrent();
 
     // TODO services
 

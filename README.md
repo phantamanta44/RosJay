@@ -12,7 +12,6 @@ An example of the talker/listener nodes from the [roscpp tutorials](http://wiki.
 
 ## To-do
 
-* Parameter server interface
 * Service providers
 * Service calls
 * Extensively test ROS datatype serialization code for correctness
