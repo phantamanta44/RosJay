@@ -158,7 +158,6 @@ class TcpRosServerThread extends Thread {
 
         @Nullable
         private TcpStateMachine.State processHeader(Map<String, String> fields, OutputStream toClient) {
-            // TODO log whenever a connection is rejected
             try {
                 internalLogger.trace("Received connection header: {}", fields);
                 remoteId = RosId.resolveGlobal(fields.get("callerid"));
@@ -166,10 +165,13 @@ class TcpRosServerThread extends Thread {
                     RosId typeId = RosId.resolveGlobal(fields.get("type"));
                     RosMessageType<?> msgType = RosMessageType.get(typeId);
                     if (msgType == null) {
+                        internalLogger.warn("Connection requested topic for unknown message type {}!", typeId);
                         throw new NoSuchElementException("Unknown message type: " + typeId);
                     }
                     DataTypeSpecification.Source msgSrc = msgType.getDataType().getTypeSpecification().getSource();
                     if (!msgSrc.getMd5Sum().equals(fields.get("md5sum"))) {
+                        internalLogger.warn("Connection requested topic for message type {} with bad MD5!", typeId);
+                        internalLogger.warn("Expected {} but got {}!", msgSrc.getMd5Sum(), fields.get("md5sum"));
                         throw new IllegalStateException("MD5 checksum mismatch!");
                     }
                     targetId = RosId.resolveGlobal(fields.get("topic"));
@@ -194,6 +196,7 @@ class TcpRosServerThread extends Thread {
                     targetId = RosId.resolveGlobal(fields.get("service"));
                     RosServiceType<?, ?> srvType = rosNode.getTransportManager().getServiceType(targetId);
                     if (srvType == null) {
+                        internalLogger.warn("Connection requested unadvertised service {}!", targetId);
                         throw new NoSuchElementException("Service is not being advertised!");
                     }
                     if (fields.containsKey("probe") && fields.get("probe").equals("1")) {
@@ -207,6 +210,8 @@ class TcpRosServerThread extends Thread {
                     } else {
                         DataTypeSpecification.Source srvSrc = srvType.getRequestType().getTypeSpecification().getSource();
                         if (!srvSrc.getMd5Sum().equals(fields.get("md5sum"))) {
+                            internalLogger.warn("Connection requested service for type {} with bad MD5!", srvType);
+                            internalLogger.warn("Expected {} but got {}!", srvSrc.getMd5Sum(), fields.get("md5sum"));
                             throw new IllegalStateException("MD5 checksum mismatch!");
                         }
                         TcpRosHeader header = new TcpRosHeader();
@@ -221,6 +226,7 @@ class TcpRosServerThread extends Thread {
                                 req -> rosNode.getTransportManager().queueServiceRequest(targetId, req, new LEDataOutputStream(toClient)));
                     }
                 } else {
+                    internalLogger.warn("Connection did not specify a valid transport type!");
                     throw new IllegalArgumentException("TCPROS client connection did not specify a transport!");
                 }
             } catch (Exception e) {
