@@ -1,13 +1,13 @@
 package xyz.phanta.rosjay.rpc;
 
+import xyz.phanta.jxmlrpc.XmlRpcClient;
+import xyz.phanta.jxmlrpc.data.*;
 import xyz.phanta.rosjay.node.RosNode;
 import xyz.phanta.rosjay.transport.msg.RosPublisher;
 import xyz.phanta.rosjay.transport.msg.RosSubscriber;
-import xyz.phanta.rosjay.util.id.RosId;
 import xyz.phanta.rosjay.util.RosUtils;
-import xyz.phanta.jxmlrpc.XmlRpcClient;
-import xyz.phanta.jxmlrpc.data.XmlRpcArray;
-import xyz.phanta.jxmlrpc.data.XmlRpcString;
+import xyz.phanta.rosjay.util.id.RosId;
+import xyz.phanta.rosjay.util.id.RosNamespace;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -83,9 +83,7 @@ public class RosRpcMaster {
 
     public URI lookupNode(RosNode caller, RosId nodeId) throws IOException {
         return URI.create(RosUtils.<XmlRpcString>unwrapRpcResult(
-                rpcOut.invokeRemote("lookupNode",
-                        new XmlRpcString(caller.getId()),
-                        new XmlRpcString(nodeId))
+                rpcOut.invokeRemote("lookupNode", new XmlRpcString(caller.getId()), new XmlRpcString(nodeId))
         ).value);
     }
 
@@ -157,21 +155,61 @@ public class RosRpcMaster {
 
     public URI getService(RosNode caller, String serviceName) throws IOException {
         return URI.create(RosUtils.<XmlRpcString>unwrapRpcResult(
-                rpcOut.invokeRemote("lookupService",
-                        new XmlRpcString(caller.getId()),
-                        new XmlRpcString(serviceName))
+                rpcOut.invokeRemote("lookupService", new XmlRpcString(caller.getId()), new XmlRpcString(serviceName))
         ).value);
     }
 
     // parameter server
 
-    // TODO deleteParam
-    // TODO setParam
-    // TODO getParam
-    // TODO searchParam
-    // TODO subscribeParam
-    // TODO unsubscribeParam
-    // TODO hasParam
-    // TODO getParamNames
+    public void deleteParam(RosNode caller, RosId paramKey) throws IOException {
+        rpcOut.invokeRemote("deleteParam", new XmlRpcString(caller.getId()), new XmlRpcString(paramKey));
+    }
+
+    public void setParam(RosNode caller, RosId paramKey, XmlRpcData value) throws IOException {
+        rpcOut.invokeRemote("setParam", new XmlRpcString(caller.getId()), new XmlRpcString(paramKey), value);
+    }
+
+    public XmlRpcData getParam(RosNode caller, RosId paramKey) throws IOException {
+        return RosUtils.unwrapRpcResult(
+                rpcOut.invokeRemote("getParam", new XmlRpcString(caller.getId()), new XmlRpcString(paramKey))
+        );
+    }
+
+    @Nullable
+    public RosId searchParam(RosNode caller, String paramName) throws IOException {
+        XmlRpcArray<?> result = (XmlRpcArray<?>)rpcOut.invokeRemote("searchParam",
+                new XmlRpcString(caller.getId()),
+                new XmlRpcString(paramName));
+        return ((XmlRpcInt)result.get(0)).value != 1 ? null
+                : RosNamespace.ROOT.resolveId(RosUtils.<XmlRpcString>unwrapRpcResult(result).value);
+    }
+
+    @Nullable
+    public XmlRpcData subscribeParam(RosNode caller, RosId paramKey) throws IOException {
+        XmlRpcArray<?> result = (XmlRpcArray<?>)rpcOut.invokeRemote("subscribeParam",
+                new XmlRpcString(caller.getId()),
+                new XmlRpcString(caller.getRpcServerUri()),
+                new XmlRpcString(paramKey));
+        return ((XmlRpcInt)result.get(0)).value != 1 ? null : result.get(2);
+    }
+
+    public void unsubscribeParam(RosNode caller, RosId paramKey) throws IOException {
+        rpcOut.invokeRemote("unsubscribeParam",
+                new XmlRpcString(caller.getId()),
+                new XmlRpcString(caller.getRpcServerUri()),
+                new XmlRpcString(paramKey));
+    }
+
+    public boolean hasParam(RosNode caller, RosId paramKey) throws IOException {
+        return RosUtils.<XmlRpcBool>unwrapRpcResult(
+                rpcOut.invokeRemote("hasParam", new XmlRpcString(caller.getId()), new XmlRpcString(paramKey))
+        ).value;
+    }
+
+    public List<RosId> getParamNames(RosNode caller) throws IOException {
+        return RosUtils.<XmlRpcArray<XmlRpcString>>unwrapRpcResult(
+                rpcOut.invokeRemote("getParamNames", new XmlRpcString(caller.getId()))
+        ).stream().map(s -> RosNamespace.ROOT.resolveId(s.value)).collect(Collectors.toList());
+    }
 
 }
