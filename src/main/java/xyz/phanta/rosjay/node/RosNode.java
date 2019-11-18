@@ -204,10 +204,19 @@ public class RosNode {
         return advertise(topicName, msgType, bufferSize, false);
     }
 
+    public <T extends RosData<T>> RosPublisher<T> advertise(RosId topicId, RosMessageType<T> msgType, int bufferSize) {
+        return advertise(topicId, msgType, bufferSize, false);
+    }
+
     public <T extends RosData<T>> RosPublisher<T> advertise(String topicName, RosMessageType<T> msgType, int bufferSize,
                                                             boolean latch) {
+        return advertise(resolveRelativeId(topicName), msgType, bufferSize, latch);
+    }
+
+    public <T extends RosData<T>> RosPublisher<T> advertise(RosId topicId, RosMessageType<T> msgType, int bufferSize,
+                                                            boolean latch) {
         try {
-            return transportManager.resolvePub(resolveRelativeId(topicName), msgType, bufferSize, latch);
+            return transportManager.resolvePub(topicId, msgType, bufferSize, latch);
         } catch (IOException e) {
             throw new IllegalStateException("Failed to resolve publication!", e);
         }
@@ -215,14 +224,23 @@ public class RosNode {
 
     public <T extends RosData<T>> RosSubscriber<T> subscribe(String topicName, RosMessageType<T> msgType, int bufferSize,
                                                              Consumer<T> callback) {
-        RosSubscriber<T> sub = subscribe(topicName, msgType, bufferSize);
+        return subscribe(resolveRelativeId(topicName), msgType, bufferSize, callback);
+    }
+
+    public <T extends RosData<T>> RosSubscriber<T> subscribe(RosId topicId, RosMessageType<T> msgType, int bufferSize,
+                                                             Consumer<T> callback) {
+        RosSubscriber<T> sub = subscribe(topicId, msgType, bufferSize);
         sub.addCallback(callback);
         return sub;
     }
 
     public <T extends RosData<T>> RosSubscriber<T> subscribe(String topicName, RosMessageType<T> msgType, int bufferSize) {
+        return subscribe(resolveRelativeId(topicName), msgType, bufferSize);
+    }
+
+    public <T extends RosData<T>> RosSubscriber<T> subscribe(RosId topicId, RosMessageType<T> msgType, int bufferSize) {
         try {
-            return transportManager.resolveSub(resolveRelativeId(topicName), msgType, bufferSize);
+            return transportManager.resolveSub(topicId, msgType, bufferSize);
         } catch (IOException e) {
             throw new IllegalStateException("Failed to resolve subscription!", e);
         }

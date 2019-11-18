@@ -17,4 +17,5 @@ An example of the talker/listener nodes from the [roscpp tutorials](http://wiki.
 * Extensively test ROS datatype serialization code for correctness
 * Node remapping
 * Implement node bus stats interface
+* Better exception semantics
 * Quell meaningless exception messages

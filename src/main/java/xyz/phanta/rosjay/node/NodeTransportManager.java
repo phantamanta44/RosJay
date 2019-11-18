@@ -30,7 +30,6 @@ public class NodeTransportManager {
     private final NamespacedMap<NodePublishHandler<?>> pubs = new NamespacedMap<>();
     private final NamespacedMap<Map<Socket, DataOutput>> pubConnections = new NamespacedMap<>();
 
-    @SuppressWarnings("Convert2MethodRef")
     private final NamespacedMap<NodeSubscribeHandler<?>> subs = NamespacedMap.concurrent();
 
     // TODO services
