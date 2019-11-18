@@ -99,6 +99,7 @@ public class ParameterManager {
     void notifyParamUpdate(RosId paramKey, XmlRpcData value) {
         Set<Consumer<? extends XmlRpcData>> callbacks = paramCallbacks.get(paramKey);
         if (callbacks != null) {
+            internalLogger.debug("Dispatching parameter update for {}...", paramKey);
             for (Consumer callback : callbacks) {
                 //noinspection unchecked
                 callback.accept(value);

@@ -11,7 +11,11 @@ public class ParamEcho {
         node.init();
 
         // register parameter callback
-        node.getParameters().<XmlRpcString>addCallback("echo", s -> node.getLogger().info(s.value));
+        node.getParameters().<XmlRpcString>addCallback("echo", s -> {
+            if (s != null) {
+                node.getLogger().info(s.value);
+            }
+        });
 
         // spin forever
         node.spin();

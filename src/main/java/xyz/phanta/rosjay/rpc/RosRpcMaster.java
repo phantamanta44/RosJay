@@ -166,8 +166,9 @@ public class RosRpcMaster {
 
     @Nullable
     public XmlRpcData getParam(RosId paramKey) throws IOException {
-        XmlRpcArray<?> result = (XmlRpcArray<?>)rpcOut.invokeRemote("getParam", callerId, new XmlRpcString(paramKey));
-        return ((XmlRpcInt)result.get(0)).value != 1 ? null : result.get(2);
+        return resolveNullableParam(
+                (XmlRpcArray<?>)rpcOut.invokeRemote("getParam", callerId, new XmlRpcString(paramKey))
+        );
     }
 
     @Nullable
@@ -179,10 +180,11 @@ public class RosRpcMaster {
 
     @Nullable
     public XmlRpcData subscribeParam(RosId paramKey) throws IOException {
-        XmlRpcArray<?> result = (XmlRpcArray<?>)rpcOut.invokeRemote("subscribeParam", callerId,
-                new XmlRpcString(caller.getRpcServerUri()),
-                new XmlRpcString(paramKey));
-        return ((XmlRpcInt)result.get(0)).value != 1 ? null : result.get(2);
+        return resolveNullableParam(
+                (XmlRpcArray<?>)rpcOut.invokeRemote("subscribeParam", callerId,
+                        new XmlRpcString(caller.getRpcServerUri()),
+                        new XmlRpcString(paramKey))
+        );
     }
 
     public void unsubscribeParam(RosId paramKey) throws IOException {
@@ -201,6 +203,15 @@ public class RosRpcMaster {
         return RosUtils.<XmlRpcArray<XmlRpcString>>unwrapRpcResult(
                 rpcOut.invokeRemote("getParamNames", callerId)
         ).stream().map(s -> RosId.resolveGlobal(s.value)).collect(Collectors.toList());
+    }
+
+    @Nullable
+    private static XmlRpcData resolveNullableParam(XmlRpcArray<?> response) {
+        if (((XmlRpcInt)response.get(0)).value != 1) {
+            return null;
+        }
+        XmlRpcData result = response.get(2);
+        return (result instanceof XmlRpcStruct<?> && ((XmlRpcStruct<?>)result).getEntries().isEmpty()) ? null : result;
     }
 
 }

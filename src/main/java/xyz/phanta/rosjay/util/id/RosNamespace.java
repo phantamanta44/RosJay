@@ -48,6 +48,9 @@ public class RosNamespace {
     }
 
     public RosId resolveId(String name) {
+        if (name.endsWith("/")) {
+            name = name.substring(0, name.length() - 1);
+        }
         int nameIndex = name.lastIndexOf('/');
         return nameIndex == -1 ? new RosId(this, name)
                 : new RosId(resolveNamespace(name.substring(0, nameIndex)), name.substring(nameIndex + 1));
