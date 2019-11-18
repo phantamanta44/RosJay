@@ -25,18 +25,27 @@ public class ParameterManager {
     }
 
     @Nullable
-    public <T extends XmlRpcData> T get(RosId paramId) {
+    public <T extends XmlRpcData> T get(String paramKey) {
+        return get(owner.resolveRelativeId(paramKey));
+    }
+
+    @Nullable
+    public <T extends XmlRpcData> T get(RosId paramKey) {
         try {
-            internalLogger.debug("Retrieving parameter {}...", paramId);
+            internalLogger.debug("Retrieving parameter {}...", paramKey);
             //noinspection unchecked
-            return (T)owner.getRosMaster().getParam(paramId);
+            return (T)owner.getRosMaster().getParam(paramKey);
         } catch (IOException e) {
             throw new IllegalStateException("Failed to retrieve parameter!", e);
         }
     }
 
-    public <T extends XmlRpcData> T get(RosId paramId, Supplier<T> defaultFactory) {
-        T paramValue = get(paramId);
+    public <T extends XmlRpcData> T get(String paramKey, Supplier<T> defaultFactory) {
+        return get(owner.resolveRelativeId(paramKey), defaultFactory);
+    }
+
+    public <T extends XmlRpcData> T get(RosId paramKey, Supplier<T> defaultFactory) {
+        T paramValue = get(paramKey);
         return paramValue != null ? paramValue : defaultFactory.get();
     }
 
@@ -50,15 +59,8 @@ public class ParameterManager {
         }
     }
 
-    @Nullable
-    public <T extends XmlRpcData> T resolve(String paramName) {
-        RosId paramKey = resolveKey(paramName);
-        return paramKey == null ? null : get(paramKey);
-    }
-
-    public <T extends XmlRpcData> T resolve(String paramName, Supplier<T> defaultFactory) {
-        T paramValue = resolve(paramName);
-        return paramValue != null ? paramValue : defaultFactory.get();
+    public <T extends XmlRpcData> void addCallback(String paramKey, Consumer<T> callback) {
+        addCallback(owner.resolveRelativeId(paramKey), callback);
     }
 
     public <T extends XmlRpcData> void addCallback(RosId paramKey, Consumer<T> callback) {
@@ -72,6 +74,10 @@ public class ParameterManager {
             }
             return new HashSet<>();
         }).add(callback);
+    }
+
+    public void removeCallback(String paramKey, Consumer<? extends XmlRpcData> callback) {
+        removeCallback(owner.resolveRelativeId(paramKey), callback);
     }
 
     public void removeCallback(RosId paramKey, Consumer<? extends XmlRpcData> callback) {

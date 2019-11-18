@@ -110,8 +110,8 @@ public class RosRpcNode {
 
     }
 
-    public void paramUpdate(RosId paramId, XmlRpcData paramValue) throws IOException {
-        rpcOut.invokeRemote("paramUpdate", callerId, new XmlRpcString(paramId), paramValue);
+    public void paramUpdate(RosId paramKey, XmlRpcData paramValue) throws IOException {
+        rpcOut.invokeRemote("paramUpdate", callerId, new XmlRpcString(paramKey), paramValue);
     }
 
     public void publisherUpdate(RosId topicId, Collection<URI> pubUris) throws IOException {
