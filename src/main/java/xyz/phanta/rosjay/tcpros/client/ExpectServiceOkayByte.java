@@ -1,6 +1,7 @@
 package xyz.phanta.rosjay.tcpros.client;
 
 import xyz.phanta.rosjay.node.NodeTransportManager;
+import xyz.phanta.rosjay.tcpros.stator.ExpectDeserializerChain;
 import xyz.phanta.rosjay.tcpros.stator.TcpStateMachine;
 import xyz.phanta.rosjay.transport.srv.RosServiceType;
 import xyz.phanta.rosjay.util.id.RosId;

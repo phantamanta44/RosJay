@@ -1,14 +1,12 @@
 package xyz.phanta.rosjay.util;
 
-import xyz.phanta.rosjay.transport.data.RosData;
-
 import javax.annotation.Nullable;
 import java.util.Objects;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-public class RosDataQueue<T extends RosData<T>> {
+public class RosDataQueue<T> {
 
     private final Entry<T>[] buffer;
     private int fPtr = 0, bPtr = 0;
@@ -102,7 +100,7 @@ public class RosDataQueue<T extends RosData<T>> {
         bPtr = (bPtr + 1) % buffer.length;
     }
 
-    public static class Entry<T extends RosData<T>> {
+    public static class Entry<T> {
 
         private final T value;
         private final int seqIndex;

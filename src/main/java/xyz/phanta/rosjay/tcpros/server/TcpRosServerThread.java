@@ -3,11 +3,14 @@ package xyz.phanta.rosjay.tcpros.server;
 import org.slf4j.Logger;
 import xyz.phanta.rosjay.node.RosNode;
 import xyz.phanta.rosjay.tcpros.TcpRosHeader;
+import xyz.phanta.rosjay.tcpros.stator.ExpectDeserializerChain;
 import xyz.phanta.rosjay.tcpros.stator.ExpectHeaderDatagram;
 import xyz.phanta.rosjay.tcpros.stator.TcpStateMachine;
 import xyz.phanta.rosjay.transport.msg.RosMessageType;
 import xyz.phanta.rosjay.transport.spec.DataTypeSpecification;
+import xyz.phanta.rosjay.transport.srv.RosServiceType;
 import xyz.phanta.rosjay.util.id.RosId;
+import xyz.phanta.rosjay.util.lowdata.LEDataOutputStream;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -102,6 +105,10 @@ class TcpRosServerThread extends Thread {
             this.clientSocket = clientSocket;
         }
 
+        private boolean isClientHandlerAlive() {
+            return isServerAlive() && !clientSocket.isClosed() && clientHandlerAlive.get();
+        }
+
         @SuppressWarnings("StatementWithEmptyBody")
         @Override
         public void run() {
@@ -112,23 +119,25 @@ class TcpRosServerThread extends Thread {
                     InputStream fromClient = clientSocket.getInputStream()
             ) {
                 internalLogger.trace("Waiting for connection header...");
-                TcpStateMachine stator = new TcpStateMachine(ExpectHeaderDatagram.expectHeader(fields -> {
-                    processHeader(fields, toClient);
-                    return null;
-                }));
-                while (isServerAlive() && !clientSocket.isClosed() && clientHandlerAlive.get() && stator.accept(fromClient))
-                    ;
+                TcpStateMachine stator = new TcpStateMachine(ExpectHeaderDatagram.expectHeader(
+                        fields -> processHeader(fields, toClient)));
+                while (isClientHandlerAlive() && stator.accept(fromClient)) ;
 
-                internalLogger.trace("Idling...");
-                while (isServerAlive() && !clientSocket.isClosed() && clientHandlerAlive.get() && fromClient.read() != -1)
-                    ;
+                if (isClientHandlerAlive()) {
+                    internalLogger.trace("Idling...");
+                    while (isClientHandlerAlive() && fromClient.read() != -1) ;
+                }
             } catch (Exception e) {
                 if (rosNode.isAlive()) {
                     internalLogger.warn("TCPROS client connection errored!", e);
                 }
             }
 
-            internalLogger.trace("Cleaning up client connection {}...", clientSocket.getInetAddress());
+            if (targetId != null) {
+                internalLogger.trace("Cleaning up client connection {} for {}...", clientSocket.getInetAddress(), targetId);
+            } else {
+                internalLogger.trace("Cleaning up client connection {}...", clientSocket.getInetAddress());
+            }
             try {
                 clientSocket.close();
             } catch (IOException e) {
@@ -147,7 +156,9 @@ class TcpRosServerThread extends Thread {
             clientHandlerAlive.set(false);
         }
 
-        private void processHeader(Map<String, String> fields, OutputStream toClient) {
+        @Nullable
+        private TcpStateMachine.State processHeader(Map<String, String> fields, OutputStream toClient) {
+            // TODO log whenever a connection is rejected
             try {
                 internalLogger.trace("Received connection header: {}", fields);
                 remoteId = RosId.resolveGlobal(fields.get("callerid"));
@@ -176,7 +187,39 @@ class TcpRosServerThread extends Thread {
                     internalLogger.debug("Negotiated topic connection with {} for {} ({}).",
                             remoteId, targetId, typeId.toUnrootedString());
                 } else if (fields.containsKey("service")) {
-                    throw new UnsupportedOperationException("service"); // TODO services
+                    if (fields.containsKey("persistent") && fields.get("persistent").equals("1")) {
+                        // TODO persistent service server connections
+                        throw new UnsupportedOperationException("Persistent connections are not supported!");
+                    }
+                    targetId = RosId.resolveGlobal(fields.get("service"));
+                    RosServiceType<?, ?> srvType = rosNode.getTransportManager().getServiceType(targetId);
+                    if (srvType == null) {
+                        throw new NoSuchElementException("Service is not being advertised!");
+                    }
+                    if (fields.containsKey("probe") && fields.get("probe").equals("1")) {
+                        TcpRosHeader header = new TcpRosHeader();
+                        header.putField("callerid", rosNode.getId().toString());
+                        header.putField("type", srvType.getId().toUnrootedString());
+                        header.writeQuietly(toClient);
+                        internalLogger.debug("Handled service probe connection with {} for {} ({}).",
+                                remoteId, targetId, srvType.getId().toUnrootedString());
+                        kill();
+                    } else {
+                        DataTypeSpecification.Source srvSrc = srvType.getRequestType().getTypeSpecification().getSource();
+                        if (!srvSrc.getMd5Sum().equals(fields.get("md5sum"))) {
+                            throw new IllegalStateException("MD5 checksum mismatch!");
+                        }
+                        TcpRosHeader header = new TcpRosHeader();
+                        header.putField("callerid", rosNode.getId().toString());
+                        header.putField("type", srvType.getId().toUnrootedString());
+                        header.putField("md5sum", srvSrc.getMd5Sum());
+                        header.writeQuietly(toClient);
+                        rosNode.getTransportManager().getBusStateTracker().openOutgoing(remoteId, targetId);
+                        internalLogger.debug("Negotiated service connection with {} for {} ({}).",
+                                remoteId, targetId, srvType.getId().toUnrootedString());
+                        return ExpectDeserializerChain.expect(srvType.getRequestType(),
+                                req -> rosNode.getTransportManager().queueServiceRequest(targetId, req, new LEDataOutputStream(toClient)));
+                    }
                 } else {
                     throw new IllegalArgumentException("TCPROS client connection did not specify a transport!");
                 }
@@ -186,6 +229,7 @@ class TcpRosServerThread extends Thread {
                 header.writeQuietly(toClient);
                 kill();
             }
+            return null;
         }
 
     }

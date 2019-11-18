@@ -1,7 +1,5 @@
-package xyz.phanta.rosjay.tcpros.client;
+package xyz.phanta.rosjay.tcpros.stator;
 
-import xyz.phanta.rosjay.tcpros.stator.ExpectDatagramLength;
-import xyz.phanta.rosjay.tcpros.stator.TcpStateMachine;
 import xyz.phanta.rosjay.transport.data.RosData;
 import xyz.phanta.rosjay.transport.data.RosDataType;
 import xyz.phanta.rosjay.util.deserchain.DeserializationChain;
@@ -11,9 +9,9 @@ import java.nio.ByteBuffer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-class ExpectDeserializerChain<T extends RosData<T>> implements TcpStateMachine.State {
+public class ExpectDeserializerChain<T extends RosData<T>> implements TcpStateMachine.State {
 
-    static <T extends RosData<T>> TcpStateMachine.State expect(RosDataType<T> type, Consumer<T> callback) {
+    public static <T extends RosData<T>> TcpStateMachine.State expect(RosDataType<T> type, Consumer<T> callback) {
         return new ExpectDatagramLength(len -> {
             T dataInstance = type.newInstance();
             return getChainLink(dataInstance, dataInstance.linkDeserializer(null), callback, () -> expect(type, callback));

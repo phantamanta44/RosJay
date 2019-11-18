@@ -17,6 +17,7 @@ import xyz.phanta.rosjay.transport.msg.RosMessageType;
 import xyz.phanta.rosjay.transport.msg.RosPublisher;
 import xyz.phanta.rosjay.transport.msg.RosSubscriber;
 import xyz.phanta.rosjay.transport.srv.RosServiceClient;
+import xyz.phanta.rosjay.transport.srv.RosServiceProvider;
 import xyz.phanta.rosjay.transport.srv.RosServiceType;
 import xyz.phanta.rosjay.util.RosRate;
 import xyz.phanta.rosjay.util.RosUtils;
@@ -33,6 +34,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class RosNode {
@@ -276,6 +278,34 @@ public class RosNode {
     public <REQ extends RosData<REQ>, RES extends RosData<RES>> RosServiceClient<REQ, RES> serviceClient(RosId serviceId,
                                                                                                          RosServiceType<REQ, RES> srvType) {
         return transportManager.resolveSrvClient(serviceId, srvType);
+    }
+
+    public <REQ extends RosData<REQ>, RES extends RosData<RES>> RosServiceProvider<REQ, RES> advertiseService(String serviceName,
+                                                                                                              RosServiceType<REQ, RES> srvType,
+                                                                                                              Function<REQ, RES> handler) {
+        return advertiseService(resolveRelativeId(serviceName), srvType, handler);
+    }
+
+    public <REQ extends RosData<REQ>, RES extends RosData<RES>> RosServiceProvider<REQ, RES> advertiseService(RosId serviceId,
+                                                                                                              RosServiceType<REQ, RES> srvType,
+                                                                                                              Function<REQ, RES> handler) {
+        RosServiceProvider<REQ, RES> provider = advertiseService(serviceId, srvType);
+        provider.setHandler(handler);
+        return provider;
+    }
+
+    public <REQ extends RosData<REQ>, RES extends RosData<RES>> RosServiceProvider<REQ, RES> advertiseService(String serviceName,
+                                                                                                              RosServiceType<REQ, RES> srvType) {
+        return advertiseService(resolveRelativeId(serviceName), srvType);
+    }
+
+    public <REQ extends RosData<REQ>, RES extends RosData<RES>> RosServiceProvider<REQ, RES> advertiseService(RosId serviceId,
+                                                                                                              RosServiceType<REQ, RES> srvType) {
+        try {
+            return transportManager.resolveSrvServer(serviceId, srvType);
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to resolve service provider!", e);
+        }
     }
 
     public ParameterManager getParameters() {

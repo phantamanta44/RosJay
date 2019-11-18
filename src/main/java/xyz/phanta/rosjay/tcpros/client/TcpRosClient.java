@@ -3,6 +3,7 @@ package xyz.phanta.rosjay.tcpros.client;
 import org.slf4j.Logger;
 import xyz.phanta.rosjay.node.RosNode;
 import xyz.phanta.rosjay.tcpros.TcpRosHeader;
+import xyz.phanta.rosjay.tcpros.stator.ExpectDeserializerChain;
 import xyz.phanta.rosjay.tcpros.stator.ExpectHeaderDatagram;
 import xyz.phanta.rosjay.tcpros.stator.TcpStateMachine;
 import xyz.phanta.rosjay.transport.msg.RosMessageType;

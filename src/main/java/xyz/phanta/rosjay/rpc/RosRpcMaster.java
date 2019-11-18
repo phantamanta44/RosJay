@@ -35,16 +35,17 @@ public class RosRpcMaster {
 
     // topic/service provider registration
 
-    public void registerService(String serviceName) throws IOException {
+    public void registerService(RosId serviceId) throws IOException {
+        URI tcpUri = caller.getTcpServerUri();
         rpcOut.invokeRemote("registerService", callerId,
-                new XmlRpcString(serviceName),
-                new XmlRpcString(caller.getTcpServerUri()),
+                new XmlRpcString(serviceId),
+                new XmlRpcString("rosrpc://" + tcpUri.getHost() + ":" + tcpUri.getPort()),
                 new XmlRpcString(caller.getRpcServerUri()));
     }
 
-    public void unregisterService(String serviceName) throws IOException {
+    public void unregisterService(RosId serviceId) throws IOException {
         rpcOut.invokeRemote("unregisterService", callerId,
-                new XmlRpcString(serviceName),
+                new XmlRpcString(serviceId),
                 new XmlRpcString(caller.getTcpServerUri()));
     }
 

@@ -8,16 +8,16 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.function.Consumer;
 
-public class ExpectErrorString implements TcpStateMachine.State {
+class ExpectErrorString implements TcpStateMachine.State {
 
     private final int length;
     private final Consumer<String> callback;
 
-    public static TcpStateMachine.State expect(Consumer<String> callback) {
+    static TcpStateMachine.State expect(Consumer<String> callback) {
         return new ExpectDatagramLength(len -> new ExpectErrorString(len, callback));
     }
 
-    public ExpectErrorString(int length, Consumer<String> callback) {
+    private ExpectErrorString(int length, Consumer<String> callback) {
         this.length = length;
         this.callback = callback;
     }

@@ -6,6 +6,7 @@ import xyz.phanta.rosjay.transport.msg.RosMessageType;
 import xyz.phanta.rosjay.transport.msg.RosPublisher;
 import xyz.phanta.rosjay.transport.msg.RosSubscriber;
 import xyz.phanta.rosjay.transport.srv.RosServiceClient;
+import xyz.phanta.rosjay.transport.srv.RosServiceProvider;
 import xyz.phanta.rosjay.transport.srv.RosServiceType;
 import xyz.phanta.rosjay.util.BusStateTracker;
 import xyz.phanta.rosjay.util.RosDataQueue;
@@ -21,6 +22,7 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 public class NodeTransportManager {
@@ -40,7 +42,7 @@ public class NodeTransportManager {
     private final NamespacedMap<NodeServiceClient<?, ?>> srvClients = NamespacedMap.concurrent();
 
     // service servers
-    // TODO service servers
+    private final NamespacedMap<NodeServiceServer<?, ?>> srvServers = NamespacedMap.concurrent();
 
     private boolean alive = true;
 
@@ -120,6 +122,22 @@ public class NodeTransportManager {
         return client;
     }
 
+    <REQ extends RosData<REQ>, RES extends RosData<RES>> RosServiceProvider<REQ, RES> resolveSrvServer(RosId serviceId,
+                                                                                                       RosServiceType<REQ, RES> srvType)
+            throws IOException {
+        //noinspection unchecked
+        NodeServiceServer<REQ, RES> server = (NodeServiceServer<REQ, RES>)srvServers.get(serviceId);
+        if (server != null) {
+            return server;
+        }
+
+        internalLogger.debug("Creating srv server for {} ({})...", serviceId, srvType);
+        server = new NodeServiceServer<>(this, serviceId, srvType, 64);
+        srvServers.put(serviceId, server);
+        owner.getRosMaster().registerService(serviceId);
+        return server;
+    }
+
     void notifyPublicationKilled(NodePublishHandler<?> publisher) {
         internalLogger.debug("Cleaning up pub to {} ({})...", publisher.getTopicId(), publisher.getMsgType());
         if (alive) {
@@ -148,6 +166,18 @@ public class NodeTransportManager {
         internalLogger.debug("Cleaning up service client for {} ({})...", client.getServiceId(), client.getSrvType());
         if (alive) {
             srvClients.remove(client.getServiceId());
+        }
+    }
+
+    void notifyServiceServerKilled(NodeServiceServer<?, ?> server) {
+        internalLogger.debug("Cleaning up service server for {} ({})...", server.getServiceId(), server.getSrvType());
+        if (alive) {
+            srvServers.remove(server.getServiceId());
+        }
+        try {
+            owner.getRosMaster().unregisterService(server.getServiceId());
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to clean up service server!", e);
         }
     }
 
@@ -196,12 +226,24 @@ public class NodeTransportManager {
         }
     }
 
+    @Nullable
+    public RosServiceType<?, ?> getServiceType(RosId serviceId) {
+        NodeServiceServer<?, ?> server = srvServers.get(serviceId);
+        return server != null ? server.getSrvType() : null;
+    }
+
+    @SuppressWarnings("unchecked")
+    public void queueServiceRequest(RosId serviceId, RosData<?> request, OutputStream toClient) {
+        Objects.requireNonNull(srvServers.get(serviceId)).getDataQueue()
+                .offer(new NodeServiceServer.Request(request, new LEDataOutputStream(toClient)));
+    }
+
     void tick() throws IOException {
+        // TODO should probably trap io exceptions per tick call
         for (Map.Entry<RosId, NodePublishHandler<?>> pub : pubs.entrySet()) {
-            RosDataQueue<?> pubQueue = pub.getValue().getDataQueue();
-            RosDataQueue.Entry<?> entry;
+            RosDataQueue<? extends RosData<?>> pubQueue = pub.getValue().getDataQueue();
+            RosDataQueue.Entry<? extends RosData<?>> entry;
             while ((entry = pubQueue.poll()) != null) {
-                RosData<?> msg = entry.getValue();
                 synchronized (pubConnections) {
                     Map<Socket, DataOutput> connections = pubConnections.get(pub.getKey());
                     if (connections != null) {
@@ -217,7 +259,9 @@ public class NodeTransportManager {
         for (Map.Entry<RosId, NodeSubscribeHandler<?>> sub : subs.entrySet()) {
             sub.getValue().consumeMessages();
         }
-        // TODO tick service providers
+        for (Map.Entry<RosId, NodeServiceServer<?, ?>> server : srvServers.entrySet()) {
+            server.getValue().processRequests();
+        }
     }
 
     void kill() {
@@ -247,6 +291,15 @@ public class NodeTransportManager {
                 client.getValue().kill();
             } catch (Exception e) {
                 internalLogger.warn("Failed to clean up service client!", e);
+            }
+        }
+
+        internalLogger.debug("Cleaning up service servers...");
+        for (Map.Entry<RosId, NodeServiceServer<?, ?>> server : srvServers.entrySet()) {
+            try {
+                server.getValue().kill();
+            } catch (Exception e) {
+                internalLogger.warn("Failed to clean up service server!", e);
             }
         }
     }
