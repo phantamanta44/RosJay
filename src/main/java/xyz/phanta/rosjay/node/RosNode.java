@@ -314,11 +314,7 @@ public class RosNode {
 
     public void spinOnce() {
         if (alive) {
-            try {
-                transportManager.tick();
-            } catch (IOException e) {
-                internalLogger.warn("Encountered exception while ticking transports!", e);
-            }
+            transportManager.tick();
         }
     }
 

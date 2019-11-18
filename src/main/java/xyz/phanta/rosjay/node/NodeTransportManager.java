@@ -238,29 +238,40 @@ public class NodeTransportManager {
                 .offer(new NodeServiceServer.Request(request, new LEDataOutputStream(toClient)));
     }
 
-    void tick() throws IOException {
-        // TODO should probably trap io exceptions per tick call
+    void tick() {
         for (Map.Entry<RosId, NodePublishHandler<?>> pub : pubs.entrySet()) {
-            RosDataQueue<? extends RosData<?>> pubQueue = pub.getValue().getDataQueue();
-            RosDataQueue.Entry<? extends RosData<?>> entry;
-            while ((entry = pubQueue.poll()) != null) {
-                synchronized (pubConnections) {
-                    Map<Socket, DataOutput> connections = pubConnections.get(pub.getKey());
-                    if (connections != null) {
-                        byte[] msgData = RosUtils.serializeDataPacket(entry.getValue(), entry.getSeqIndex());
-                        for (DataOutput stream : connections.values()) {
-                            stream.writeInt(msgData.length);
-                            stream.write(msgData);
+            try {
+                RosDataQueue<? extends RosData<?>> pubQueue = pub.getValue().getDataQueue();
+                RosDataQueue.Entry<? extends RosData<?>> entry;
+                while ((entry = pubQueue.poll()) != null) {
+                    synchronized (pubConnections) {
+                        Map<Socket, DataOutput> connections = pubConnections.get(pub.getKey());
+                        if (connections != null) {
+                            byte[] msgData = RosUtils.serializeDataPacket(entry.getValue(), entry.getSeqIndex());
+                            for (DataOutput stream : connections.values()) {
+                                stream.writeInt(msgData.length);
+                                stream.write(msgData);
+                            }
                         }
                     }
                 }
+            } catch (Exception e) {
+                internalLogger.warn("Encountered exception while ticking publication: " + pub.getKey(), e);
             }
         }
         for (Map.Entry<RosId, NodeSubscribeHandler<?>> sub : subs.entrySet()) {
-            sub.getValue().consumeMessages();
+            try {
+                sub.getValue().consumeMessages();
+            } catch (Exception e) {
+                internalLogger.warn("Encountered exception while ticking subscription: " + sub.getKey(), e);
+            }
         }
         for (Map.Entry<RosId, NodeServiceServer<?, ?>> server : srvServers.entrySet()) {
-            server.getValue().processRequests();
+            try {
+                server.getValue().processRequests();
+            } catch (Exception e) {
+                internalLogger.warn("Encountered exception while ticking service provider: " + server.getKey(), e);
+            }
         }
     }
 
