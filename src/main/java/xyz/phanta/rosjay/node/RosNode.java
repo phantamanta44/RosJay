@@ -55,6 +55,7 @@ public class RosNode {
     }
 
     private final RosId nodeId;
+    private final RosNamespace privateNs;
     private final RosRpcMaster rosMaster;
     private final String localIp;
     private final Logger internalLogger;
@@ -92,6 +93,7 @@ public class RosNode {
 
     public RosNode(RosId nodeId, URI masterUri, String localIp) {
         this.nodeId = nodeId; // TODO remapping?
+        this.privateNs = nodeId.getNamespace().resolveNamespace(nodeId.getName());
         this.rosMaster = new RosRpcMaster(this, masterUri);
         this.localIp = localIp;
         this.internalLogger = LoggerFactory.getLogger(GLOBAL_LOGGER.getName() + "." + nodeId.toUnrootedString().replace('/', '.'));
@@ -107,6 +109,14 @@ public class RosNode {
 
     public RosNamespace getNamespace() {
         return nodeId.getNamespace();
+    }
+
+    public RosNamespace getPrivateNamespace() {
+        return privateNs;
+    }
+
+    public RosId resolveRelativeId(String name) {
+        return name.startsWith("~") ? privateNs.resolveId(name.substring(1)) : nodeId.getNamespace().resolveId(name);
     }
 
     RosRpcMaster getRosMaster() {
@@ -197,7 +207,7 @@ public class RosNode {
     public <T extends RosData<T>> RosPublisher<T> advertise(String topicName, RosMessageType<T> msgType, int bufferSize,
                                                             boolean latch) {
         try {
-            return transportManager.resolvePub(nodeId.getNamespace().resolveId(topicName), msgType, bufferSize, latch);
+            return transportManager.resolvePub(resolveRelativeId(topicName), msgType, bufferSize, latch);
         } catch (IOException e) {
             throw new IllegalStateException("Failed to resolve publication!", e);
         }
@@ -212,7 +222,7 @@ public class RosNode {
 
     public <T extends RosData<T>> RosSubscriber<T> subscribe(String topicName, RosMessageType<T> msgType, int bufferSize) {
         try {
-            return transportManager.resolveSub(nodeId.getNamespace().resolveId(topicName), msgType, bufferSize);
+            return transportManager.resolveSub(resolveRelativeId(topicName), msgType, bufferSize);
         } catch (IOException e) {
             throw new IllegalStateException("Failed to resolve subscription!", e);
         }
