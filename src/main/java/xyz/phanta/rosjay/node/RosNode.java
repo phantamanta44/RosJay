@@ -90,7 +90,7 @@ public class RosNode {
 
     public RosNode(RosId nodeId, URI masterUri, String localIp) {
         this.nodeId = nodeId; // TODO remapping?
-        this.rosMaster = new RosRpcMaster(masterUri);
+        this.rosMaster = new RosRpcMaster(this, masterUri);
         this.localIp = localIp;
         this.internalLogger = LoggerFactory.getLogger(GLOBAL_LOGGER.getName() + "." + nodeId.toUnrootedString().replace('/', '.'));
         this.transportManager = new NodeTransportManager(this);
@@ -290,7 +290,7 @@ public class RosNode {
                             new XmlRpcString(""),
                             new XmlRpcString(peerUriCache.computeIfAbsent(state.peerId, k -> {
                                 try {
-                                    return rosMaster.lookupNode(RosNode.this, k);
+                                    return rosMaster.lookupNode(k);
                                 } catch (IOException e) {
                                     throw new IllegalStateException("Could not look up node RPC URI: " + k, e);
                                 }
@@ -304,7 +304,7 @@ public class RosNode {
         @XmlRpcRoutine
         public XmlRpcArray<?> getMasterUri(XmlRpcString callerId) {
             internalLogger.trace("getMasterUri({})", callerId);
-            return RosUtils.buildRpcResult(new XmlRpcString(rosMaster.getUri().toString()));
+            return RosUtils.buildRpcResult(new XmlRpcString(rosMaster.getRpcUri().toString()));
         }
 
         @XmlRpcRoutine

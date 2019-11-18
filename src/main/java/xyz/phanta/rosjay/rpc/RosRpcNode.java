@@ -1,15 +1,15 @@
 package xyz.phanta.rosjay.rpc;
 
-import xyz.phanta.rosjay.node.RosNode;
-import xyz.phanta.rosjay.util.BusStateTracker;
-import xyz.phanta.rosjay.util.id.RosId;
-import xyz.phanta.rosjay.util.id.RosNamespace;
-import xyz.phanta.rosjay.util.RosUtils;
 import xyz.phanta.jxmlrpc.XmlRpcClient;
 import xyz.phanta.jxmlrpc.data.XmlRpcArray;
 import xyz.phanta.jxmlrpc.data.XmlRpcData;
 import xyz.phanta.jxmlrpc.data.XmlRpcInt;
 import xyz.phanta.jxmlrpc.data.XmlRpcString;
+import xyz.phanta.rosjay.node.RosNode;
+import xyz.phanta.rosjay.util.BusStateTracker;
+import xyz.phanta.rosjay.util.RosUtils;
+import xyz.phanta.rosjay.util.id.RosId;
+import xyz.phanta.rosjay.util.id.RosNamespace;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -21,18 +21,22 @@ import java.util.List;
 
 public class RosRpcNode {
 
+    private final RosNode caller;
+    private final XmlRpcString callerId;
     private final XmlRpcClient rpcOut;
 
-    public RosRpcNode(URI nodeUri) {
+    public RosRpcNode(RosNode caller, URI nodeUri) {
+        this.caller = caller;
+        this.callerId = new XmlRpcString(caller.getId());
         this.rpcOut = new XmlRpcClient(nodeUri);
     }
 
     // TODO getBusStats
 
-    public List<BusInfoResponse> getBusInfo(RosNode caller) throws IOException {
+    public List<BusInfoResponse> getBusInfo() throws IOException {
         List<BusInfoResponse> result = new ArrayList<>();
         for (XmlRpcArray<XmlRpcString> busInfo : RosUtils.<XmlRpcArray<XmlRpcArray<XmlRpcString>>>unwrapRpcResult(
-                rpcOut.invokeRemote("getBusInfo", new XmlRpcString(caller.getId()))
+                rpcOut.invokeRemote("getBusInfo", callerId)
         )) {
             result.add(new BusInfoResponse(
                     URI.create(busInfo.get(1).value),
@@ -59,26 +63,26 @@ public class RosRpcNode {
 
     }
 
-    public URI getMasterUri(RosNode caller) throws IOException {
+    public URI getMasterUri() throws IOException {
         return URI.create(RosUtils.<XmlRpcString>unwrapRpcResult(
                 rpcOut.invokeRemote("getMasterUri", new XmlRpcString(caller.getId().toString()))
         ).value);
     }
 
-    public void shutdown(RosNode caller, String reason) throws IOException {
-        rpcOut.invokeRemote("shutdown", new XmlRpcString(caller.getId()), new XmlRpcString(reason));
+    public void shutdown(String reason) throws IOException {
+        rpcOut.invokeRemote("shutdown", callerId, new XmlRpcString(reason));
     }
 
-    public int getPid(RosNode caller) throws IOException {
+    public int getPid() throws IOException {
         return RosUtils.<XmlRpcInt>unwrapRpcResult(
-                rpcOut.invokeRemote("getPid", new XmlRpcString(caller.getId()))
+                rpcOut.invokeRemote("getPid", callerId)
         ).value;
     }
 
-    public List<TopicResponse> getSubscriptions(RosNode caller) throws IOException {
+    public List<TopicResponse> getSubscriptions() throws IOException {
         List<TopicResponse> result = new ArrayList<>();
         for (XmlRpcArray<XmlRpcString> sub : RosUtils.<XmlRpcArray<XmlRpcArray<XmlRpcString>>>unwrapRpcResult(
-                rpcOut.invokeRemote("getSubscriptions", new XmlRpcString(caller.getId()))
+                rpcOut.invokeRemote("getSubscriptions", callerId)
         )) {
             result.add(new TopicResponse(
                     RosNamespace.ROOT.resolveId(sub.get(0).value),
@@ -87,10 +91,10 @@ public class RosRpcNode {
         return result;
     }
 
-    public List<TopicResponse> getPublications(RosNode caller) throws IOException {
+    public List<TopicResponse> getPublications() throws IOException {
         List<TopicResponse> result = new ArrayList<>();
         for (XmlRpcArray<XmlRpcString> pub : RosUtils.<XmlRpcArray<XmlRpcArray<XmlRpcString>>>unwrapRpcResult(
-                rpcOut.invokeRemote("getPublications", new XmlRpcString(caller.getId()))
+                rpcOut.invokeRemote("getPublications", callerId)
         )) {
             result.add(new TopicResponse(
                     RosNamespace.ROOT.resolveId(pub.get(0).value),
@@ -111,20 +115,20 @@ public class RosRpcNode {
 
     }
 
-    public void paramUpdate(RosNode caller, RosId paramId, XmlRpcData paramValue) throws IOException {
-        rpcOut.invokeRemote("paramUpdate", new XmlRpcString(caller.getId()), new XmlRpcString(paramId), paramValue);
+    public void paramUpdate(RosId paramId, XmlRpcData paramValue) throws IOException {
+        rpcOut.invokeRemote("paramUpdate", callerId, new XmlRpcString(paramId), paramValue);
     }
 
-    public void publisherUpdate(RosNode caller, RosId topicId, Collection<URI> pubUris) throws IOException {
+    public void publisherUpdate(RosId topicId, Collection<URI> pubUris) throws IOException {
         rpcOut.invokeRemote("publisherUpdate", new XmlRpcString(caller), new XmlRpcString(topicId),
                 pubUris.stream().map(XmlRpcString::new).collect(XmlRpcArray.collect()));
     }
 
     @Nullable
-    public InetSocketAddress requestTopic(RosNode caller, RosId topicId) throws IOException {
+    public InetSocketAddress requestTopic(RosId topicId) throws IOException {
         XmlRpcArray<XmlRpcData> result = RosUtils.unwrapRpcResult(
                 rpcOut.invokeRemote("requestTopic",
-                        new XmlRpcString(caller.getId()),
+                        callerId,
                         new XmlRpcString(topicId),
                         XmlRpcArray.of(XmlRpcArray.of(new XmlRpcString("TCPROS"))))
         );

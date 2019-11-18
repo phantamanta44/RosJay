@@ -31,8 +31,8 @@ public class OpenSubscriberTask implements Runnable {
     public void run() {
         for (URI uri : uris) {
             try {
-                RosRpcNode nodeRpc = new RosRpcNode(uri);
-                InetSocketAddress tcpAddr = nodeRpc.requestTopic(rosNode, topicId);
+                RosRpcNode nodeRpc = new RosRpcNode(rosNode, uri);
+                InetSocketAddress tcpAddr = nodeRpc.requestTopic(topicId);
                 if (tcpAddr != null) {
                     if (!rosNode.getTcpClientManager().isConnectionOpen(tcpAddr)) {
                         rosNode.getTcpClientManager().openConnection(tcpAddr, new TcpRosTarget.Topic<>(topicId, msgType));

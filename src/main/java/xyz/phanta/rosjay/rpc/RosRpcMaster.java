@@ -20,90 +20,86 @@ import java.util.stream.Collectors;
 @SuppressWarnings("unchecked")
 public class RosRpcMaster {
 
+    private final RosNode caller;
+    private final XmlRpcString callerId;
     private final XmlRpcClient rpcOut;
 
-    public RosRpcMaster(URI masterUri) {
+    public RosRpcMaster(RosNode caller, URI masterUri) {
+        this.caller = caller;
+        this.callerId = new XmlRpcString(caller.getId());
         this.rpcOut = new XmlRpcClient(masterUri);
     }
 
-    public URI getUri() {
+    public URI getRpcUri() {
         return rpcOut.getServerUri();
     }
 
     // topic/service provider registration
 
-    public void registerService(RosNode caller, String serviceName) throws IOException {
-        rpcOut.invokeRemote("registerService",
-                new XmlRpcString(caller.getId()),
+    public void registerService(String serviceName) throws IOException {
+        rpcOut.invokeRemote("registerService", callerId,
                 new XmlRpcString(serviceName),
                 new XmlRpcString(caller.getTcpServerUri()),
                 new XmlRpcString(caller.getRpcServerUri()));
     }
 
-    public void unregisterService(RosNode caller, String serviceName) throws IOException {
-        rpcOut.invokeRemote("unregisterService",
-                new XmlRpcString(caller.getId()),
+    public void unregisterService(String serviceName) throws IOException {
+        rpcOut.invokeRemote("unregisterService", callerId,
                 new XmlRpcString(serviceName),
                 new XmlRpcString(caller.getTcpServerUri()));
     }
 
-    public List<URI> registerSubscriber(RosNode caller, RosSubscriber<?> sub) throws IOException {
+    public List<URI> registerSubscriber(RosSubscriber<?> sub) throws IOException {
         return RosUtils.<XmlRpcArray<XmlRpcString>>unwrapRpcResult(
-                rpcOut.invokeRemote("registerSubscriber",
-                        new XmlRpcString(caller.getId()),
+                rpcOut.invokeRemote("registerSubscriber", callerId,
                         new XmlRpcString(sub.getTopicId()),
                         new XmlRpcString(sub.getMsgType().getId().toUnrootedString()),
                         new XmlRpcString(caller.getRpcServerUri()))
         ).stream().map(u -> URI.create(u.value)).collect(Collectors.toList());
     }
 
-    public void unregisterSubscriber(RosNode caller, RosId topicId) throws IOException {
-        rpcOut.invokeRemote("unregisterSubscriber",
-                new XmlRpcString(caller.getId()),
+    public void unregisterSubscriber(RosId topicId) throws IOException {
+        rpcOut.invokeRemote("unregisterSubscriber", callerId,
                 new XmlRpcString(topicId),
                 new XmlRpcString(caller.getRpcServerUri()));
     }
 
-    public void registerPublisher(RosNode caller, RosPublisher<?> pub) throws IOException {
-        rpcOut.invokeRemote("registerPublisher",
-                new XmlRpcString(caller.getId()),
+    public void registerPublisher(RosPublisher<?> pub) throws IOException {
+        rpcOut.invokeRemote("registerPublisher", callerId,
                 new XmlRpcString(pub.getTopicId()),
                 new XmlRpcString(pub.getMsgType().getId().toUnrootedString()),
                 new XmlRpcString(caller.getRpcServerUri()));
     }
 
-    public void unregisterPublisher(RosNode caller, RosId topicId) throws IOException {
-        rpcOut.invokeRemote("unregisterPublisher",
-                new XmlRpcString(caller.getId()),
+    public void unregisterPublisher(RosId topicId) throws IOException {
+        rpcOut.invokeRemote("unregisterPublisher", callerId,
                 new XmlRpcString(topicId),
                 new XmlRpcString(caller.getRpcServerUri()));
     }
 
     // ros master properties
 
-    public URI lookupNode(RosNode caller, RosId nodeId) throws IOException {
+    public URI lookupNode(RosId nodeId) throws IOException {
         return URI.create(RosUtils.<XmlRpcString>unwrapRpcResult(
-                rpcOut.invokeRemote("lookupNode", new XmlRpcString(caller.getId()), new XmlRpcString(nodeId))
+                rpcOut.invokeRemote("lookupNode", callerId, new XmlRpcString(nodeId))
         ).value);
     }
 
-    public Map<String, String> getPublishedTopics(RosNode caller, @Nullable String subgraph) throws IOException {
+    public Map<String, String> getPublishedTopics(@Nullable String subgraph) throws IOException {
         return RosUtils.<XmlRpcArray<XmlRpcArray<XmlRpcString>>>unwrapRpcResult(
-                rpcOut.invokeRemote("getPublishedTopics",
-                        new XmlRpcString(caller.getId()),
-                        new XmlRpcString(subgraph != null ? subgraph : ""))
+                rpcOut.invokeRemote("getPublishedTopics", callerId, new XmlRpcString(subgraph != null ? subgraph : ""))
         ).stream().collect(Collectors.toMap(e -> e.get(0).value, e -> e.get(1).value));
     }
 
-    public Map<String, String> getTopicTypes(RosNode caller) throws IOException {
+    public Map<String, String> getTopicTypes() throws IOException {
         return RosUtils.<XmlRpcArray<XmlRpcArray<XmlRpcString>>>unwrapRpcResult(
-                rpcOut.invokeRemote("getTopicTypes", new XmlRpcString(caller.getId()))
+                rpcOut.invokeRemote("getTopicTypes", callerId)
         ).stream().collect(Collectors.toMap(e -> e.get(0).value, e -> e.get(1).value));
     }
 
-    public SystemStateResponse getSystemState(RosNode caller) throws IOException {
+    public SystemStateResponse getSystemState() throws IOException {
         XmlRpcArray<XmlRpcArray<XmlRpcArray<?>>> res = RosUtils.unwrapRpcResult(
-                rpcOut.invokeRemote("getSystemState", new XmlRpcString(caller.getId()))
+                rpcOut.invokeRemote("getSystemState", callerId)
         );
         SystemStateResponse state = new SystemStateResponse();
         for (XmlRpcArray<?> pubTopic : res.get(0)) {
@@ -147,68 +143,64 @@ public class RosRpcMaster {
 
     }
 
-    public URI getUri(RosNode caller) throws IOException {
+    public URI getUri() throws IOException {
         return URI.create(RosUtils.<XmlRpcString>unwrapRpcResult(
-                rpcOut.invokeRemote("getUri", new XmlRpcString(caller.getId()))
+                rpcOut.invokeRemote("getUri", callerId)
         ).value);
     }
 
-    public URI getService(RosNode caller, String serviceName) throws IOException {
+    public URI getService(String serviceName) throws IOException {
         return URI.create(RosUtils.<XmlRpcString>unwrapRpcResult(
-                rpcOut.invokeRemote("lookupService", new XmlRpcString(caller.getId()), new XmlRpcString(serviceName))
+                rpcOut.invokeRemote("lookupService", callerId, new XmlRpcString(serviceName))
         ).value);
     }
 
     // parameter server
 
-    public void deleteParam(RosNode caller, RosId paramKey) throws IOException {
-        rpcOut.invokeRemote("deleteParam", new XmlRpcString(caller.getId()), new XmlRpcString(paramKey));
+    public void deleteParam(RosId paramKey) throws IOException {
+        rpcOut.invokeRemote("deleteParam", callerId, new XmlRpcString(paramKey));
     }
 
-    public void setParam(RosNode caller, RosId paramKey, XmlRpcData value) throws IOException {
-        rpcOut.invokeRemote("setParam", new XmlRpcString(caller.getId()), new XmlRpcString(paramKey), value);
+    public void setParam(RosId paramKey, XmlRpcData value) throws IOException {
+        rpcOut.invokeRemote("setParam", callerId, new XmlRpcString(paramKey), value);
     }
 
-    public XmlRpcData getParam(RosNode caller, RosId paramKey) throws IOException {
+    public XmlRpcData getParam(RosId paramKey) throws IOException {
         return RosUtils.unwrapRpcResult(
-                rpcOut.invokeRemote("getParam", new XmlRpcString(caller.getId()), new XmlRpcString(paramKey))
+                rpcOut.invokeRemote("getParam", callerId, new XmlRpcString(paramKey))
         );
     }
 
     @Nullable
-    public RosId searchParam(RosNode caller, String paramName) throws IOException {
-        XmlRpcArray<?> result = (XmlRpcArray<?>)rpcOut.invokeRemote("searchParam",
-                new XmlRpcString(caller.getId()),
-                new XmlRpcString(paramName));
+    public RosId searchParam(String paramName) throws IOException {
+        XmlRpcArray<?> result = (XmlRpcArray<?>)rpcOut.invokeRemote("searchParam", callerId, new XmlRpcString(paramName));
         return ((XmlRpcInt)result.get(0)).value != 1 ? null
                 : RosNamespace.ROOT.resolveId(RosUtils.<XmlRpcString>unwrapRpcResult(result).value);
     }
 
     @Nullable
-    public XmlRpcData subscribeParam(RosNode caller, RosId paramKey) throws IOException {
-        XmlRpcArray<?> result = (XmlRpcArray<?>)rpcOut.invokeRemote("subscribeParam",
-                new XmlRpcString(caller.getId()),
+    public XmlRpcData subscribeParam(RosId paramKey) throws IOException {
+        XmlRpcArray<?> result = (XmlRpcArray<?>)rpcOut.invokeRemote("subscribeParam", callerId,
                 new XmlRpcString(caller.getRpcServerUri()),
                 new XmlRpcString(paramKey));
         return ((XmlRpcInt)result.get(0)).value != 1 ? null : result.get(2);
     }
 
-    public void unsubscribeParam(RosNode caller, RosId paramKey) throws IOException {
-        rpcOut.invokeRemote("unsubscribeParam",
-                new XmlRpcString(caller.getId()),
+    public void unsubscribeParam(RosId paramKey) throws IOException {
+        rpcOut.invokeRemote("unsubscribeParam", callerId,
                 new XmlRpcString(caller.getRpcServerUri()),
                 new XmlRpcString(paramKey));
     }
 
-    public boolean hasParam(RosNode caller, RosId paramKey) throws IOException {
+    public boolean hasParam(RosId paramKey) throws IOException {
         return RosUtils.<XmlRpcBool>unwrapRpcResult(
-                rpcOut.invokeRemote("hasParam", new XmlRpcString(caller.getId()), new XmlRpcString(paramKey))
+                rpcOut.invokeRemote("hasParam", callerId, new XmlRpcString(paramKey))
         ).value;
     }
 
-    public List<RosId> getParamNames(RosNode caller) throws IOException {
+    public List<RosId> getParamNames() throws IOException {
         return RosUtils.<XmlRpcArray<XmlRpcString>>unwrapRpcResult(
-                rpcOut.invokeRemote("getParamNames", new XmlRpcString(caller.getId()))
+                rpcOut.invokeRemote("getParamNames", callerId)
         ).stream().map(s -> RosNamespace.ROOT.resolveId(s.value)).collect(Collectors.toList());
     }
 

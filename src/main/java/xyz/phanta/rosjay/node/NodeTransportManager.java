@@ -66,7 +66,7 @@ public class NodeTransportManager {
         internalLogger.debug("Creating pub to {} ({}) with bufSize={}, latch={}...", topicId, msgType, bufferSize, latch);
         pub = new NodePublishHandler<>(this, topicId, msgType, bufferSize, latch);
         pubs.put(topicId, pub);
-        owner.getRosMaster().registerPublisher(owner, pub);
+        owner.getRosMaster().registerPublisher(pub);
         return pub;
     }
 
@@ -87,7 +87,7 @@ public class NodeTransportManager {
         sub = new NodeSubscribeHandler<>(this, topicId, msgType, bufferSize);
         subs.put(topicId, sub);
         owner.scheduleRpcTask(new OpenSubscriberTask(
-                owner, topicId, msgType, owner.getRosMaster().registerSubscriber(owner, sub)));
+                owner, topicId, msgType, owner.getRosMaster().registerSubscriber(sub)));
         return sub;
     }
 
@@ -102,7 +102,7 @@ public class NodeTransportManager {
             pubs.remove(publisher.getTopicId());
         }
         try {
-            owner.getRosMaster().unregisterPublisher(owner, publisher.getTopicId());
+            owner.getRosMaster().unregisterPublisher(publisher.getTopicId());
         } catch (IOException e) {
             throw new IllegalStateException("Failed to clean up publisher!", e);
         }
@@ -114,7 +114,7 @@ public class NodeTransportManager {
             subs.remove(subscriber.getTopicId());
         }
         try {
-            owner.getRosMaster().unregisterSubscriber(owner, subscriber.getTopicId());
+            owner.getRosMaster().unregisterSubscriber(subscriber.getTopicId());
         } catch (IOException e) {
             throw new IllegalStateException("Failed to clean up subscriber!", e);
         }
