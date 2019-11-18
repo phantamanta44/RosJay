@@ -1,15 +1,15 @@
 package xyz.phanta.rosjay.transport.msg;
 
 import org.slf4j.Logger;
+import xyz.phanta.rosjay.rospkg.std_msgs.Header;
 import xyz.phanta.rosjay.transport.data.RosData;
 import xyz.phanta.rosjay.transport.data.RosDataType;
 import xyz.phanta.rosjay.transport.data.field.RosDataFieldTypeManager;
-import xyz.phanta.rosjay.rospkg.std_msgs.Header;
 import xyz.phanta.rosjay.transport.spec.TypeSpecResolver;
+import xyz.phanta.rosjay.util.RosUtils;
 import xyz.phanta.rosjay.util.id.NamespacedMap;
 import xyz.phanta.rosjay.util.id.RosId;
 import xyz.phanta.rosjay.util.id.RosNamespace;
-import xyz.phanta.rosjay.util.RosUtils;
 
 import javax.annotation.Nullable;
 
@@ -63,6 +63,16 @@ public class RosMessageType<T extends RosData<T>> {
 
     public T newInstance() {
         return dataType.newInstance();
+    }
+
+    @Override
+    public int hashCode() {
+        return id.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj instanceof RosMessageType && id.equals(((RosMessageType)obj).id);
     }
 
     @Override
