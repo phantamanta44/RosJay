@@ -7,7 +7,10 @@ import xyz.phanta.rosjay.tcpros.stator.ExpectHeaderDatagram;
 import xyz.phanta.rosjay.tcpros.stator.TcpStateMachine;
 import xyz.phanta.rosjay.transport.msg.RosMessageType;
 import xyz.phanta.rosjay.transport.spec.DataTypeSpecification;
+import xyz.phanta.rosjay.transport.srv.RosServiceType;
+import xyz.phanta.rosjay.util.RosUtils;
 import xyz.phanta.rosjay.util.id.RosId;
+import xyz.phanta.rosjay.util.lowdata.LEDataOutputStream;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -82,10 +85,6 @@ public class TcpRosClient {
             this.socket = socket;
         }
 
-        private boolean isClientAlive() {
-            return active.get() && !socket.isClosed();
-        }
-
         @Override
         public void run() {
             internalLogger.trace("Client monitor thread for {} initialized.", socket.getInetAddress());
@@ -103,7 +102,7 @@ public class TcpRosClient {
                 TcpStateMachine stator = new TcpStateMachine(ExpectHeaderDatagram.expectHeader(
                         fields -> processHeader(fields, toServer)));
                 //noinspection StatementWithEmptyBody
-                while (isClientAlive() && stator.accept(fromServer)) ;
+                while (active.get() && stator.accept(fromServer)) ;
             } catch (Exception e) {
                 if (rosNode.isAlive()) {
                     internalLogger.warn("TCPROS client encountered exception!", e);
@@ -116,6 +115,7 @@ public class TcpRosClient {
             } catch (IOException e) {
                 internalLogger.warn("Encountered exception while closing socket!", e);
             }
+            target.onConnectionClosed(rosNode);
             if (remoteId != null) {
                 rosNode.getTransportManager().getBusStateTracker().closeIncoming(remoteId, target.getId());
             }
@@ -136,8 +136,21 @@ public class TcpRosClient {
                     internalLogger.debug("Negotiated topic connection with {} for {}.", remoteId, target);
                     return ExpectDeserializerChain.expect(msgType.getDataType(),
                             msg -> rosNode.getTransportManager().notifyReceivedMessage(target.getId(), msg));
+                } else if (target instanceof TcpRosTarget.Service) {
+                    // TODO persistent service client support
+                    RosServiceType<?, ?> srvType = ((TcpRosTarget.Service)target).getServiceType();
+                    DataTypeSpecification.Source srvSrc = srvType.getRequestType().getTypeSpecification().getSource();
+                    if (!srvSrc.getMd5Sum().equals(fields.get("md5sum"))) {
+                        throw new IllegalStateException("MD5 checksum mismatch!");
+                    }
+                    internalLogger.debug("Negotiated service connection with {} for {}.", remoteId, target);
+                    rosNode.getTransportManager().getBusStateTracker().openIncoming(remoteId, target.getId());
+                    byte[] reqData = RosUtils.serializeDataPacket(((TcpRosTarget.Service)target).getRequestData(), 0);
+                    LEDataOutputStream dataOutput = new LEDataOutputStream(toServer);
+                    dataOutput.writeInt(reqData.length);
+                    dataOutput.write(reqData);
+                    return new ExpectServiceOkayByte(rosNode.getTransportManager(), target.getId(), srvType);
                 }
-                // TODO service case
             } catch (Exception e) {
                 TcpRosHeader header = new TcpRosHeader();
                 header.putField("error", e.toString());

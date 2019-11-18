@@ -16,6 +16,8 @@ import xyz.phanta.rosjay.transport.data.RosData;
 import xyz.phanta.rosjay.transport.msg.RosMessageType;
 import xyz.phanta.rosjay.transport.msg.RosPublisher;
 import xyz.phanta.rosjay.transport.msg.RosSubscriber;
+import xyz.phanta.rosjay.transport.srv.RosServiceClient;
+import xyz.phanta.rosjay.transport.srv.RosServiceType;
 import xyz.phanta.rosjay.util.RosRate;
 import xyz.phanta.rosjay.util.RosUtils;
 import xyz.phanta.rosjay.util.id.RosId;
@@ -244,6 +246,16 @@ public class RosNode {
         } catch (IOException e) {
             throw new IllegalStateException("Failed to resolve subscription!", e);
         }
+    }
+
+    public <REQ extends RosData<REQ>, RES extends RosData<RES>> RosServiceClient<REQ, RES> serviceClient(String serviceName,
+                                                                                                         RosServiceType<REQ, RES> srvType) {
+        return serviceClient(resolveRelativeId(serviceName), srvType);
+    }
+
+    public <REQ extends RosData<REQ>, RES extends RosData<RES>> RosServiceClient<REQ, RES> serviceClient(RosId serviceId,
+                                                                                                         RosServiceType<REQ, RES> srvType) {
+        return transportManager.resolveSrvClient(serviceId, srvType);
     }
 
     public ParameterManager getParameters() {

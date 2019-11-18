@@ -148,10 +148,10 @@ public class RosRpcMaster {
         ).value);
     }
 
-    public URI getService(String serviceName) throws IOException {
-        return URI.create(RosUtils.<XmlRpcString>unwrapRpcResult(
-                rpcOut.invokeRemote("lookupService", callerId, new XmlRpcString(serviceName))
-        ).value);
+    @Nullable
+    public URI lookupService(RosId serviceId) throws IOException {
+        XmlRpcArray<?> result = (XmlRpcArray<?>)rpcOut.invokeRemote("lookupService", callerId, new XmlRpcString(serviceId));
+        return ((XmlRpcInt)result.get(0)).value != 1 ? null : URI.create(RosUtils.<XmlRpcString>unwrapRpcResult(result).value);
     }
 
     // parameter server

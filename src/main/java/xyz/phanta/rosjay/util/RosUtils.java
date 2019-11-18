@@ -6,12 +6,16 @@ import xyz.phanta.jxmlrpc.data.XmlRpcArray;
 import xyz.phanta.jxmlrpc.data.XmlRpcData;
 import xyz.phanta.jxmlrpc.data.XmlRpcInt;
 import xyz.phanta.jxmlrpc.data.XmlRpcString;
+import xyz.phanta.rosjay.transport.data.RosData;
 import xyz.phanta.rosjay.transport.data.field.RosDataFieldTypeManager;
 import xyz.phanta.rosjay.transport.spec.DataTypeSpecification;
 import xyz.phanta.rosjay.transport.spec.TypeSpecResolver;
+import xyz.phanta.rosjay.util.lowdata.LEDataOutputStream;
 
 import javax.annotation.Nullable;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -109,27 +113,26 @@ public class RosUtils {
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException("Failed to acquire MD5 computer!");
         }
-        // TODO handle srv case
         boolean first = true;
         for (RosDataSourceFile.Element element : root.getSourceText().getElements()) {
-            if (first) {
+            if (element instanceof RosDataSourceFile.SrvDivider) {
+                first = true;
+                continue;
+            } else if (first) {
                 first = false;
             } else {
                 md5.update((byte)'\n');
             }
-            String typeName, fieldName, suffix;
+            String typeName, fieldName, suffix = null;
             if (element instanceof RosDataSourceFile.FieldDecl) {
                 RosDataSourceFile.FieldDecl fieldDecl = (RosDataSourceFile.FieldDecl)element;
                 typeName = fieldDecl.typeName;
                 fieldName = fieldDecl.name;
-                suffix = "";
-            } else if (element instanceof RosDataSourceFile.ConstDecl) {
+            } else { // must be constant declaration
                 RosDataSourceFile.ConstDecl constDecl = (RosDataSourceFile.ConstDecl)element;
                 typeName = constDecl.typeName;
                 fieldName = constDecl.name;
                 suffix = "=" + constDecl.value;
-            } else {
-                continue;
             }
             String baseTypeName = stripArrayType(typeName);
             if (RosDataFieldTypeManager.isPrimitiveType(baseTypeName)) {
@@ -143,7 +146,9 @@ public class RosUtils {
             }
             md5.update((byte)' ');
             md5.update(fieldName.getBytes(StandardCharsets.US_ASCII));
-            md5.update(suffix.getBytes(StandardCharsets.US_ASCII));
+            if (suffix != null) {
+                md5.update(suffix.getBytes(StandardCharsets.US_ASCII));
+            }
         }
         return encodeHex(md5.digest());
     }
@@ -217,6 +222,12 @@ public class RosUtils {
             sb.append(HEX_DIGITS[(b >>> 4) & 0x0F]).append(HEX_DIGITS[(b & 0x0F)]);
         }
         return sb.toString();
+    }
+
+    public static byte[] serializeDataPacket(RosData<?> data, int seqIndex) throws IOException {
+        ByteArrayOutputStream buf = new ByteArrayOutputStream();
+        data.serializeData(new LEDataOutputStream(buf), seqIndex);
+        return buf.toByteArray();
     }
 
 }

@@ -3,6 +3,8 @@ package xyz.phanta.rosjay.util;
 import xyz.phanta.rosjay.transport.data.RosData;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
+import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -12,6 +14,7 @@ public class RosDataQueue<T extends RosData<T>> {
     private int fPtr = 0, bPtr = 0;
     private int count = 0, totalOfferCount = 0;
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
+    private final Condition offerAwait = lock.writeLock().newCondition();
 
     @SuppressWarnings("unchecked")
     public RosDataQueue(int capacity) {
@@ -28,6 +31,7 @@ public class RosDataQueue<T extends RosData<T>> {
             } else {
                 ++count;
             }
+            offerAwait.signal();
         } finally {
             lock.writeLock().unlock();
         }
@@ -46,6 +50,18 @@ public class RosDataQueue<T extends RosData<T>> {
             buffer[bPtr] = null;
             incrementBack();
             return value;
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    public Entry<T> pollBlocking() throws InterruptedException {
+        lock.writeLock().lock();
+        try {
+            while (count == 0) {
+                offerAwait.await();
+            }
+            return Objects.requireNonNull(poll());
         } finally {
             lock.writeLock().unlock();
         }

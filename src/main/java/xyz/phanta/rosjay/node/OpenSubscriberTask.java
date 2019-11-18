@@ -19,7 +19,7 @@ public class OpenSubscriberTask implements Runnable {
     private final RosMessageType<?> msgType;
     private final List<URI> uris;
 
-    public OpenSubscriberTask(RosNode rosNode, RosId topicId, RosMessageType<?> msgType, List<URI> uris) {
+    OpenSubscriberTask(RosNode rosNode, RosId topicId, RosMessageType<?> msgType, List<URI> uris) {
         this.rosNode = rosNode;
         this.internalLogger = rosNode.getChildInternalLogger("task_clicxn");
         this.topicId = topicId;

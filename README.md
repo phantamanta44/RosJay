@@ -12,8 +12,9 @@ An example of the talker/listener nodes from the [roscpp tutorials](http://wiki.
 
 ## To-do
 
+* Mark all extra threads as daemon threads
+* Rename RosData#getDataType to avoid conflicts
 * Service providers
-* Service calls
 * Extensively test ROS datatype serialization code for correctness
 * Node remapping
 * Implement node bus stats interface
