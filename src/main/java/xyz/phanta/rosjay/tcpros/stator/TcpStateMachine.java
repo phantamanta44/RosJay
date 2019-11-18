@@ -25,7 +25,8 @@ public class TcpStateMachine {
         }
         int readLength = strIn.read(stage, stagePointer, stage.length - stagePointer);
         if (readLength == -1) {
-            throw new IllegalStateException("Client socket reached EOF!");
+            state = null;
+            return false;
         }
         stagePointer += readLength;
         if (stagePointer >= stage.length) {

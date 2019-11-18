@@ -17,4 +17,3 @@ An example of the talker/listener nodes from the [roscpp tutorials](http://wiki.
 * Node remapping
 * Implement node bus stats interface
 * Better exception semantics
-* Quell meaningless exception messages
