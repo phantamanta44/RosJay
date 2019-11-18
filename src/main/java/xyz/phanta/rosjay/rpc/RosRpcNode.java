@@ -9,7 +9,6 @@ import xyz.phanta.rosjay.node.RosNode;
 import xyz.phanta.rosjay.util.BusStateTracker;
 import xyz.phanta.rosjay.util.RosUtils;
 import xyz.phanta.rosjay.util.id.RosId;
-import xyz.phanta.rosjay.util.id.RosNamespace;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -42,7 +41,7 @@ public class RosRpcNode {
                     URI.create(busInfo.get(1).value),
                     BusStateTracker.State.parse(busInfo.get(2).value),
                     busInfo.get(3).value,
-                    RosNamespace.ROOT.resolveId(busInfo.get(4).value)));
+                    RosId.resolveGlobal(busInfo.get(4).value)));
         }
         return result;
     }
@@ -84,9 +83,7 @@ public class RosRpcNode {
         for (XmlRpcArray<XmlRpcString> sub : RosUtils.<XmlRpcArray<XmlRpcArray<XmlRpcString>>>unwrapRpcResult(
                 rpcOut.invokeRemote("getSubscriptions", callerId)
         )) {
-            result.add(new TopicResponse(
-                    RosNamespace.ROOT.resolveId(sub.get(0).value),
-                    RosNamespace.ROOT.resolveId(sub.get(1).value)));
+            result.add(new TopicResponse(RosId.resolveGlobal(sub.get(0).value), RosId.resolveGlobal(sub.get(1).value)));
         }
         return result;
     }
@@ -96,9 +93,7 @@ public class RosRpcNode {
         for (XmlRpcArray<XmlRpcString> pub : RosUtils.<XmlRpcArray<XmlRpcArray<XmlRpcString>>>unwrapRpcResult(
                 rpcOut.invokeRemote("getPublications", callerId)
         )) {
-            result.add(new TopicResponse(
-                    RosNamespace.ROOT.resolveId(pub.get(0).value),
-                    RosNamespace.ROOT.resolveId(pub.get(1).value)));
+            result.add(new TopicResponse(RosId.resolveGlobal(pub.get(0).value), RosId.resolveGlobal(pub.get(1).value)));
         }
         return result;
     }

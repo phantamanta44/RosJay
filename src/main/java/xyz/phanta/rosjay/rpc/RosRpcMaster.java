@@ -7,7 +7,6 @@ import xyz.phanta.rosjay.transport.msg.RosPublisher;
 import xyz.phanta.rosjay.transport.msg.RosSubscriber;
 import xyz.phanta.rosjay.util.RosUtils;
 import xyz.phanta.rosjay.util.id.RosId;
-import xyz.phanta.rosjay.util.id.RosNamespace;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -175,7 +174,7 @@ public class RosRpcMaster {
     public RosId searchParam(String paramName) throws IOException {
         XmlRpcArray<?> result = (XmlRpcArray<?>)rpcOut.invokeRemote("searchParam", callerId, new XmlRpcString(paramName));
         return ((XmlRpcInt)result.get(0)).value != 1 ? null
-                : RosNamespace.ROOT.resolveId(RosUtils.<XmlRpcString>unwrapRpcResult(result).value);
+                : RosId.resolveGlobal(RosUtils.<XmlRpcString>unwrapRpcResult(result).value);
     }
 
     @Nullable
@@ -201,7 +200,7 @@ public class RosRpcMaster {
     public List<RosId> getParamNames() throws IOException {
         return RosUtils.<XmlRpcArray<XmlRpcString>>unwrapRpcResult(
                 rpcOut.invokeRemote("getParamNames", callerId)
-        ).stream().map(s -> RosNamespace.ROOT.resolveId(s.value)).collect(Collectors.toList());
+        ).stream().map(s -> RosId.resolveGlobal(s.value)).collect(Collectors.toList());
     }
 
 }

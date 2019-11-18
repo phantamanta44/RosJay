@@ -8,7 +8,6 @@ import xyz.phanta.rosjay.tcpros.stator.TcpStateMachine;
 import xyz.phanta.rosjay.transport.msg.RosMessageType;
 import xyz.phanta.rosjay.transport.spec.DataTypeSpecification;
 import xyz.phanta.rosjay.util.id.RosId;
-import xyz.phanta.rosjay.util.id.RosNamespace;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -151,9 +150,9 @@ class TcpRosServerThread extends Thread {
         private void processHeader(Map<String, String> fields, OutputStream toClient) {
             try {
                 internalLogger.trace("Received connection header: {}", fields);
-                remoteId = RosNamespace.ROOT.resolveId(fields.get("callerid"));
+                remoteId = RosId.resolveGlobal(fields.get("callerid"));
                 if (fields.containsKey("topic")) {
-                    RosId typeId = RosNamespace.ROOT.resolveId(fields.get("type"));
+                    RosId typeId = RosId.resolveGlobal(fields.get("type"));
                     RosMessageType<?> msgType = RosMessageType.get(typeId);
                     if (msgType == null) {
                         throw new NoSuchElementException("Unknown message type: " + typeId);
@@ -162,7 +161,7 @@ class TcpRosServerThread extends Thread {
                     if (!msgSrc.getMd5Sum().equals(fields.get("md5sum"))) {
                         throw new IllegalStateException("MD5 checksum mismatch!");
                     }
-                    targetId = RosNamespace.ROOT.resolveId(fields.get("topic"));
+                    targetId = RosId.resolveGlobal(fields.get("topic"));
                     if (fields.containsKey("tcp_nodelay") && fields.get("tcp_nodelay").equals("1")) {
                         clientSocket.setTcpNoDelay(true);
                     }

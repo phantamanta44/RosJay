@@ -1,10 +1,11 @@
 package xyz.phanta.rosjay.transport.data.field;
 
+import xyz.phanta.rosjay.rospkg.std_msgs.Header;
 import xyz.phanta.rosjay.transport.data.RosData;
 import xyz.phanta.rosjay.transport.data.field.impl.*;
-import xyz.phanta.rosjay.rospkg.std_msgs.Header;
 import xyz.phanta.rosjay.transport.msg.RosMessageType;
 import xyz.phanta.rosjay.util.id.NamespacedMap;
+import xyz.phanta.rosjay.util.id.RosId;
 import xyz.phanta.rosjay.util.id.RosNamespace;
 
 import java.util.HashMap;
@@ -33,7 +34,7 @@ public class RosDataFieldTypeManager {
         primitiveFieldTypes.put("string", FieldTypeString.TYPE);
         primitiveFieldTypes.put("time", FieldTypeTime.TYPE);
         primitiveFieldTypes.put("duration", FieldTypeDuration.TYPE);
-        namespacedFieldTypes.put(RosNamespace.ROOT.resolveId("Header"), FieldTypeHeader.TYPE);
+        namespacedFieldTypes.put(RosId.resolveGlobal("Header"), FieldTypeHeader.TYPE);
         namespacedFieldTypes.put(Header.TYPE.getId(), FieldTypeHeader.TYPE);
     }
 

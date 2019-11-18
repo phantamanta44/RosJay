@@ -2,7 +2,8 @@ package xyz.phanta.rosjay.transport.spec;
 
 import org.slf4j.Logger;
 import xyz.phanta.rosjay.transport.data.field.RosDataField;
-import xyz.phanta.rosjay.util.*;
+import xyz.phanta.rosjay.util.RosDataSourceFile;
+import xyz.phanta.rosjay.util.RosUtils;
 import xyz.phanta.rosjay.util.id.NamespacedMap;
 import xyz.phanta.rosjay.util.id.RosId;
 import xyz.phanta.rosjay.util.id.RosNamespace;
@@ -30,7 +31,7 @@ public class TypeSpecResolver {
             RosId id = ns.resolveId(name);
             Path msgFile = RosUtils.findFile(getFileName(id, "msg"));
             if (msgFile == null) {
-                id = RosNamespace.ROOT.resolveId(name);
+                id = RosId.resolveGlobal(name);
                 msgFile = RosUtils.findFile(getFileName(id, "msg"));
                 if (msgFile == null) {
                     throw new NoSuchElementException("Could not find message specification: " + name);

@@ -4,6 +4,6 @@ import xyz.phanta.rosjay.util.id.RosNamespace;
 
 public class RosGraphMsgs {
 
-    public static final RosNamespace NAMESPACE = RosNamespace.ROOT.resolveNamespace("rosgraph_msgs");
+    public static final RosNamespace NAMESPACE = RosNamespace.resolveGlobal("rosgraph_msgs");
 
 }

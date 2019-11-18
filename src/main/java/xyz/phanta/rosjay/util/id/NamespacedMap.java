@@ -38,7 +38,7 @@ public class NamespacedMap<T> {
     @Nullable
     public T resolve(RosNamespace ns, String name) {
         T value = backing.get(ns.resolveId(name));
-        return value != null ? value : backing.get(RosNamespace.ROOT.resolveId(name));
+        return value != null ? value : backing.get(RosId.resolveGlobal(name));
     }
 
     public boolean containsKey(RosId id) {
@@ -46,7 +46,7 @@ public class NamespacedMap<T> {
     }
 
     public boolean containsMatch(RosNamespace ns, String name) {
-        return backing.containsKey(ns.resolveId(name)) || backing.containsKey(RosNamespace.ROOT.resolveId(name));
+        return backing.containsKey(ns.resolveId(name)) || backing.containsKey(RosId.resolveGlobal(name));
     }
 
     public void remove(RosId id) {

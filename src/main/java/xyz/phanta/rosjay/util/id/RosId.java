@@ -2,6 +2,10 @@ package xyz.phanta.rosjay.util.id;
 
 public class RosId {
 
+    public static RosId resolveGlobal(String name) {
+        return RosNamespace.ROOT.resolveId(name);
+    }
+
     private final RosNamespace namespace;
     private final String name;
 

@@ -8,7 +8,6 @@ import xyz.phanta.rosjay.tcpros.stator.TcpStateMachine;
 import xyz.phanta.rosjay.transport.msg.RosMessageType;
 import xyz.phanta.rosjay.transport.spec.DataTypeSpecification;
 import xyz.phanta.rosjay.util.id.RosId;
-import xyz.phanta.rosjay.util.id.RosNamespace;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -126,7 +125,7 @@ public class TcpRosClient {
         @Nullable
         private TcpStateMachine.State processHeader(Map<String, String> fields, OutputStream toServer) {
             try {
-                remoteId = RosNamespace.ROOT.resolveId(fields.get("callerid"));
+                remoteId = RosId.resolveGlobal(fields.get("callerid"));
                 if (target instanceof TcpRosTarget.Topic) {
                     RosMessageType<?> msgType = ((TcpRosTarget.Topic)target).getMessageType();
                     DataTypeSpecification.Source msgSrc = msgType.getDataType().getTypeSpecification().getSource();

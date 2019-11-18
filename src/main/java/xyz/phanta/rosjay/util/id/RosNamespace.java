@@ -8,6 +8,10 @@ public class RosNamespace {
 
     public static final RosNamespace ROOT = new RosNamespace();
 
+    public static RosNamespace resolveGlobal(String path) {
+        return ROOT.resolveNamespace(path);
+    }
+
     @Nullable
     private final RosNamespace parent;
     private final String pathNode;

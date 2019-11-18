@@ -87,7 +87,7 @@ public class RosNode {
     }
 
     public RosNode(String nodeId, String masterUri, String localIp) {
-        this(RosNamespace.ROOT.resolveId(nodeId), URI.create(masterUri), localIp);
+        this(RosId.resolveGlobal(nodeId), URI.create(masterUri), localIp);
     }
 
     public RosNode(RosId nodeId, URI masterUri, String localIp) {
@@ -369,14 +369,14 @@ public class RosNode {
         @XmlRpcRoutine
         public XmlRpcArray<?> paramUpdate(XmlRpcString callerId, XmlRpcString paramKey, XmlRpcData paramValue) {
             internalLogger.trace("paramUpdate({}, {}, {})", callerId, paramKey, paramValue);
-            paramManager.notifyParamUpdate(RosNamespace.ROOT.resolveId(paramKey.value), paramValue);
+            paramManager.notifyParamUpdate(RosId.resolveGlobal(paramKey.value), paramValue);
             return RosUtils.buildRpcResult(XmlRpcInt.ZERO);
         }
 
         @XmlRpcRoutine
         public XmlRpcArray<?> publisherUpdate(XmlRpcString callerId, XmlRpcString topicName, XmlRpcArray<XmlRpcString> pubUris) {
             internalLogger.trace("publisherUpdate({}, {}, {})", callerId, topicName, pubUris);
-            RosId topicId = RosNamespace.ROOT.resolveId(topicName.value);
+            RosId topicId = RosId.resolveGlobal(topicName.value);
             RosSubscriber<?> sub = getTransportManager().getSub(topicId);
             if (sub != null) {
                 scheduleRpcTask(new OpenSubscriberTask(RosNode.this, sub.getTopicId(), sub.getMsgType(),

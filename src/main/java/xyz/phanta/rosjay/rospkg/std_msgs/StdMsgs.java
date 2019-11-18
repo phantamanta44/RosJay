@@ -4,6 +4,6 @@ import xyz.phanta.rosjay.util.id.RosNamespace;
 
 public class StdMsgs { // TODO more message data types
 
-    public static final RosNamespace NAMESPACE = RosNamespace.ROOT.resolveNamespace("std_msgs");
+    public static final RosNamespace NAMESPACE = RosNamespace.resolveGlobal("std_msgs");
 
 }
