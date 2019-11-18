@@ -31,6 +31,7 @@ import java.net.URI;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -143,33 +144,52 @@ public class RosNode {
         }
         initializedAlready = true;
         // TODO sanity check environment to make sure ROS is ready to run
-        try {
-            internalLogger.debug("Initializing XMLRPC server...");
-            rpcServer.serve(new InetSocketAddress(0), rpcTaskScheduler);
-            rpcServerUri = RosUtils.buildAddressUri(localIp, rpcServer.getServerAddress().getPort());
-            internalLogger.debug("XMLRPC server running at {}", rpcServerUri);
+        Thread initThread = new Thread(() -> {
+            try {
+                internalLogger.debug("Initializing XMLRPC server...");
+                rpcServer.serve(new InetSocketAddress(0), rpcTaskScheduler);
+                rpcServerUri = RosUtils.buildAddressUri(localIp, rpcServer.getServerAddress().getPort());
+                internalLogger.debug("XMLRPC server running at {}", rpcServerUri);
 
-            internalLogger.debug("Initializing TCPROS server...");
-            tcpServer.serve(0);
-            tcpServerUri = RosUtils.buildAddressUri(localIp, tcpServer.getActivePort());
-            internalLogger.debug("TCPROS server running at {}", tcpServerUri);
+                internalLogger.debug("Initializing TCPROS server...");
+                tcpServer.serve(0);
+                tcpServerUri = RosUtils.buildAddressUri(localIp, tcpServer.getActivePort());
+                internalLogger.debug("TCPROS server running at {}", tcpServerUri);
 
-            alive = true;
+                alive = true;
 
-            internalLogger.debug("Creating /rosout publisher...");
-            logger = new RosLogger(this, advertise("/rosout", Log.TYPE, 100, true));
+                internalLogger.debug("Creating /rosout publisher...");
+                logger = new RosLogger(this, advertise("/rosout", Log.TYPE, 100, true));
 
-            internalLogger.debug("Adding to live node set...");
-            synchronized (aliveNodes) {
-                aliveNodes.add(this);
+                internalLogger.debug("Adding to live node set...");
+                synchronized (aliveNodes) {
+                    aliveNodes.add(this);
+                }
+
+                internalLogger.debug("Initialization complete.");
+            } catch (Throwable e) {
+                internalLogger.error("Initialization failed! Cleaning up...");
+                alive = false;
+                killSockets();
+                throw new IllegalStateException("ROS node server initialization failed!", e);
             }
-
-            internalLogger.debug("Initialization complete.");
-        } catch (Throwable e) {
-            internalLogger.error("Initialization failed! Cleaning up...");
-            alive = false;
-            killSockets();
-            throw new IllegalStateException("ROS node server initialization failed!", e);
+        }, "ROS Node Init Thread: " + nodeId);
+        AtomicReference<Throwable> initExceptionHolder = new AtomicReference<>(null);
+        initThread.setUncaughtExceptionHandler((t, e) -> initExceptionHolder.set(e));
+        initThread.setDaemon(true);
+        initThread.start();
+        try {
+            initThread.join();
+        } catch (InterruptedException e) {
+            throw new IllegalStateException("Interrupted while waiting for node initialization!", e);
+        }
+        Throwable initException = initExceptionHolder.get();
+        if (initException != null) {
+            if (initException instanceof RuntimeException) {
+                throw (RuntimeException)initException;
+            } else {
+                throw new RuntimeException(initException);
+            }
         }
     }
 
