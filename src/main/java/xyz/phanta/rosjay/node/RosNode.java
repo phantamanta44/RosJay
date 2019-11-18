@@ -77,6 +77,7 @@ public class RosNode {
     private final TcpRosClientManager tcpClient;
 
     // other state
+    private boolean initializedAlready = false;
     private boolean alive = false;
     @Nullable
     private RosLogger logger = null;
@@ -125,6 +126,10 @@ public class RosNode {
     }
 
     public void init() {
+        if (initializedAlready) {
+            throw new IllegalStateException("ROS nodes can only be initialized once!");
+        }
+        initializedAlready = true;
         // TODO sanity check environment to make sure ROS is ready to run
         try {
             internalLogger.debug("Initializing XMLRPC server...");
