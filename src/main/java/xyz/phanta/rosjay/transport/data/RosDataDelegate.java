@@ -48,7 +48,7 @@ class RosDataDelegate<T extends RosData<T>> implements InvocationHandler {
 
     static {
         try {
-            METHOD_PROXIES.put(RosData.class.getDeclaredMethod("getDataType"),
+            METHOD_PROXIES.put(RosData.class.getDeclaredMethod("retrieveDataType"),
                     (instance, args) -> instance.factory.getDataType());
             METHOD_PROXIES.put(RosData.class.getDeclaredMethod("serializeData", DataOutput.class, Integer.TYPE),
                     (instance, args) -> {

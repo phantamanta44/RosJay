@@ -8,7 +8,7 @@ import java.io.IOException;
 
 public interface RosData<T extends RosData<T>> {
 
-    RosDataType<T> getDataType();
+    RosDataType<T> retrieveDataType(); // break nomenclature to make sure ros datatype property getters don't conflict
 
     void serializeData(DataOutput dest, int seqIndex) throws IOException;
 
